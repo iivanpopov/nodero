@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let ctx = Arc::new(Context {
         udp: UdpSocket::bind(&master_addr).await?,
-        tcp_senders: RwLock::new(HashMap::new()),
+        tcp_clients: RwLock::new(HashMap::new()),
     });
 
     let udp_task = tokio::spawn({

@@ -1,11 +1,10 @@
+use crate::context::{Context, TcpClient};
 use proto::codec::decode_payload;
 use proto::proto::envelope::Payload;
 use shared::transport::read_frame;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::{net::TcpStream, sync::mpsc};
 use tracing::{debug, error, info, instrument, warn};
-
-use crate::context::Context;
 
 #[instrument(skip_all, fields(%source_addr))]
 pub async fn handle_udp_payload(payload: Payload, source_addr: SocketAddr, ctx: &Arc<Context>) {
@@ -30,7 +29,6 @@ async fn connect_to_device(addr: SocketAddr, device_id: String, ctx: &Arc<Contex
     }
 }
 
-#[instrument(skip_all, fields(%addr, %device_id))]
 async fn handle_tcp_connection(
     stream: TcpStream,
     addr: SocketAddr,
@@ -40,10 +38,13 @@ async fn handle_tcp_connection(
     let (mut reader, _writer) = stream.into_split();
     let (tx, _rx) = mpsc::channel::<Vec<u8>>(64);
 
-    ctx.tcp_senders
-        .write()
-        .await
-        .insert(device_id.clone(), tx.clone());
+    ctx.tcp_clients.write().await.insert(
+        device_id.clone(),
+        TcpClient {
+            addr: addr,
+            tx: tx.clone(),
+        },
+    );
 
     loop {
         let frame = match read_frame(&mut reader).await {
@@ -64,17 +65,16 @@ async fn handle_tcp_connection(
         };
     }
 
-    let mut device_senders = ctx.tcp_senders.write().await;
+    let mut device_senders = ctx.tcp_clients.write().await;
     if device_senders
         .get(&device_id)
-        .is_some_and(|sender| sender.same_channel(&tx))
+        .is_some_and(|sender| sender.tx.same_channel(&tx))
     {
         device_senders.remove(&device_id);
     }
 }
 
-#[instrument(skip_all, fields(%device_id))]
-async fn handle_tcp_payload(payload: Payload, device_id: &str, _ctx: &Arc<Context>) {
+async fn handle_tcp_payload(payload: Payload, _device_id: &str, _ctx: &Arc<Context>) {
     match payload {
         Payload::DiscoverRequest(_) => {
             warn!("unexpected DiscoverRequest over tcp");
