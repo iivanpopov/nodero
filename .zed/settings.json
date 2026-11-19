@@ -1,0 +1,9 @@
+{
+  "language_servers": [
+    "rust-analyzer",
+    "codebook",
+    "gopls",
+    "taplo",
+    "json-language-server"
+  ]
+}

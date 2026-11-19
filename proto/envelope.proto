@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package nodero;
+
+import "discovery.proto";
+
+option go_package = "server/gen";
+
+message Envelope {
+  oneof payload {
+    DiscoverRequest discover_request = 1;
+  }
+}

@@ -1,0 +1,12 @@
+[package]
+name = "slave"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+proto.workspace = true
+shared.workspace = true
+prost.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid = "1.29.3"

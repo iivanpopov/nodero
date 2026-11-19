@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package nodero;
+
+option go_package = "server/gen";
+
+message DiscoverRequest {
+  string device_id = 1;
+}
