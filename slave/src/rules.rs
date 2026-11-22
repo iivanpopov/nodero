@@ -4,7 +4,7 @@ use tracing::info;
 pub struct Rule {
     pub id: String,
     pub name: String,
-    pub path: String,
+    pub pattern: String,
 }
 
 impl Rule {
@@ -20,7 +20,7 @@ impl Rule {
                   <FilePathCondition Path="{}" />
               </Conditions>
             </FilePathRule>"#,
-            &self.id, &self.name, &self.path
+            &self.id, &self.name, &self.pattern
         )
     }
 }

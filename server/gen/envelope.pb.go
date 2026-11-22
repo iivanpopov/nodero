@@ -26,6 +26,7 @@ type Envelope struct {
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*Envelope_DiscoverRequest
+	//	*Envelope_DiscoverResponse
 	Payload       isEnvelope_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -77,6 +78,15 @@ func (x *Envelope) GetDiscoverRequest() *DiscoverRequest {
 	return nil
 }
 
+func (x *Envelope) GetDiscoverResponse() *DiscoverResponse {
+	if x != nil {
+		if x, ok := x.Payload.(*Envelope_DiscoverResponse); ok {
+			return x.DiscoverResponse
+		}
+	}
+	return nil
+}
+
 type isEnvelope_Payload interface {
 	isEnvelope_Payload()
 }
@@ -85,15 +95,22 @@ type Envelope_DiscoverRequest struct {
 	DiscoverRequest *DiscoverRequest `protobuf:"bytes,1,opt,name=discover_request,json=discoverRequest,proto3,oneof"`
 }
 
+type Envelope_DiscoverResponse struct {
+	DiscoverResponse *DiscoverResponse `protobuf:"bytes,2,opt,name=discover_response,json=discoverResponse,proto3,oneof"`
+}
+
 func (*Envelope_DiscoverRequest) isEnvelope_Payload() {}
+
+func (*Envelope_DiscoverResponse) isEnvelope_Payload() {}
 
 var File_envelope_proto protoreflect.FileDescriptor
 
 const file_envelope_proto_rawDesc = "" +
 	"\n" +
-	"\x0eenvelope.proto\x12\x06nodero\x1a\x0fdiscovery.proto\"[\n" +
+	"\x0eenvelope.proto\x12\x06nodero\x1a\x0fdiscovery.proto\"\xa4\x01\n" +
 	"\bEnvelope\x12D\n" +
-	"\x10discover_request\x18\x01 \x01(\v2\x17.nodero.DiscoverRequestH\x00R\x0fdiscoverRequestB\t\n" +
+	"\x10discover_request\x18\x01 \x01(\v2\x17.nodero.DiscoverRequestH\x00R\x0fdiscoverRequest\x12G\n" +
+	"\x11discover_response\x18\x02 \x01(\v2\x18.nodero.DiscoverResponseH\x00R\x10discoverResponseB\t\n" +
 	"\apayloadB\fZ\n" +
 	"server/genb\x06proto3"
 
@@ -111,16 +128,18 @@ func file_envelope_proto_rawDescGZIP() []byte {
 
 var file_envelope_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_envelope_proto_goTypes = []any{
-	(*Envelope)(nil),        // 0: nodero.Envelope
-	(*DiscoverRequest)(nil), // 1: nodero.DiscoverRequest
+	(*Envelope)(nil),         // 0: nodero.Envelope
+	(*DiscoverRequest)(nil),  // 1: nodero.DiscoverRequest
+	(*DiscoverResponse)(nil), // 2: nodero.DiscoverResponse
 }
 var file_envelope_proto_depIdxs = []int32{
 	1, // 0: nodero.Envelope.discover_request:type_name -> nodero.DiscoverRequest
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	2, // 1: nodero.Envelope.discover_response:type_name -> nodero.DiscoverResponse
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_envelope_proto_init() }
@@ -131,6 +150,7 @@ func file_envelope_proto_init() {
 	file_discovery_proto_init()
 	file_envelope_proto_msgTypes[0].OneofWrappers = []any{
 		(*Envelope_DiscoverRequest)(nil),
+		(*Envelope_DiscoverResponse)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

@@ -10,4 +10,12 @@ pub mod proto {
             }
         }
     }
+
+    impl From<DiscoverResponse> for Envelope {
+        fn from(from: DiscoverResponse) -> Self {
+            Envelope {
+                payload: Some(envelope::Payload::DiscoverResponse(from)),
+            }
+        }
+    }
 }

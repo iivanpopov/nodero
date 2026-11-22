@@ -9,5 +9,6 @@ option go_package = "server/gen";
 message Envelope {
   oneof payload {
     DiscoverRequest discover_request = 1;
+    DiscoverResponse discover_response = 2;
   }
 }

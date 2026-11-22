@@ -4,6 +4,8 @@ package nodero;
 
 option go_package = "server/gen";
 
-message DiscoverRequest {
+message DiscoverRequest {}
+
+message DiscoverResponse {
   string device_id = 1;
 }
