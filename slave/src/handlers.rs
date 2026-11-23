@@ -48,14 +48,14 @@ pub async fn handle_tcp_connection(stream: TcpStream, addr: SocketAddr, ctx: &Co
     };
 
     tokio::select! {
-        () = read_tcp_frames(reader, ctx) => {},
+        () = read_tcp(reader, ctx) => {},
         () = write => {},
     }
 
     *ctx.tx.lock().await = None;
 }
 
-async fn read_tcp_frames(mut reader: OwnedReadHalf, ctx: &Context) {
+async fn read_tcp(mut reader: OwnedReadHalf, ctx: &Context) {
     loop {
         let frame = match read_frame(&mut reader).await {
             Ok(frame) => frame,

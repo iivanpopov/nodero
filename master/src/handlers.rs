@@ -68,7 +68,7 @@ fn spawn_device_connection(
                     };
 
                     tokio::select! {
-                        () = read_tcp_frames(reader, &device_id, &ctx) => {},
+                        () = read_tcp(reader, &device_id, &ctx) => {},
                         () = write => {},
                     }
                 }
@@ -89,7 +89,7 @@ fn spawn_device_connection(
     slave
 }
 
-async fn read_tcp_frames(mut reader: OwnedReadHalf, device_id: &str, ctx: &Arc<Context>) {
+async fn read_tcp(mut reader: OwnedReadHalf, device_id: &str, ctx: &Arc<Context>) {
     loop {
         let frame = match read_frame(&mut reader).await {
             Ok(frame) => frame,
