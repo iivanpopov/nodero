@@ -18,7 +18,6 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
 )
 
@@ -47,7 +46,6 @@ func main() {
 
 	db := db.New(conn)
 
-	frontendURL := strings.Trim(os.Getenv("FRONTEND_URL"), "/")
 	backendURL := strings.Trim(os.Getenv("BACKEND_URL"), "/")
 
 	googleCfg := &oauth2.Config{
@@ -57,15 +55,8 @@ func main() {
 		RedirectURL:  fmt.Sprintf("%s/api/v1/auth/google/callback", backendURL),
 		Endpoint:     google.Endpoint,
 	}
-	githubCfg := &oauth2.Config{
-		Scopes:       []string{"user:email"},
-		ClientID:     os.Getenv("GITHUB_OAUTH_CLIENT_ID"),
-		ClientSecret: os.Getenv("GITHUB_OAUTH_CLIENT_SECRET"),
-		RedirectURL:  fmt.Sprintf("%s/api/v1/auth/github/callback", backendURL),
-		Endpoint:     github.Endpoint,
-	}
 
-	authSvc := auth.NewService(db, googleCfg, githubCfg, frontendURL)
+	authSvc := auth.NewService(db, googleCfg)
 	authv1.NewHandler(authSvc).Register(v1)
 
 	log.Printf("listening http :%s", port)

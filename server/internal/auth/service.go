@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"server/internal/db"
 	"time"
 
@@ -14,24 +15,22 @@ import (
 	"golang.org/x/oauth2"
 )
 
+var (
+	ErrInvalidOAuthCode = errors.New("invalid oauth code")
+)
+
 type Service struct {
-	db          *db.Queries
-	googleCfg   *oauth2.Config
-	githubCfg   *oauth2.Config
-	frontendURL string
+	db        *db.Queries
+	googleCfg *oauth2.Config
 }
 
 func NewService(
 	db *db.Queries,
 	googleCfg *oauth2.Config,
-	githubCfg *oauth2.Config,
-	frontendURL string,
 ) *Service {
 	return &Service{
-		db,
-		googleCfg,
-		githubCfg,
-		frontendURL,
+		db:        db,
+		googleCfg: googleCfg,
 	}
 }
 
@@ -41,31 +40,42 @@ type GoogleUserInfo struct {
 	Name  string `json:"name"`
 }
 
-type OAuthResult struct {
-	RedirectURL  string
-	SessionToken string
+type Session struct {
+	Token     string
+	ExpiresAt time.Time
 }
 
 func (s *Service) GetGoogleOAuthURL(state string) string {
 	return s.googleCfg.AuthCodeURL(state)
 }
 
-func (s *Service) AuthWithGoogle(ctx context.Context, code string) (*OAuthResult, error) {
+func (s *Service) AuthWithGoogle(ctx context.Context, code string) (*Session, error) {
 	oauthToken, err := s.googleCfg.Exchange(ctx, code)
 	if err != nil {
-		return nil, fmt.Errorf("google token exchange %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidOAuthCode, err)
 	}
 
-	client := s.googleCfg.Client(ctx, oauthToken)
-	resp, err := client.Get("https://openidconnect.googleapis.com/v1/userinfo")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://openidconnect.googleapis.com/v1/userinfo", nil)
+	if err != nil {
+		return nil, fmt.Errorf("build google userinfo request: %w", err)
+	}
+
+	resp, err := s.googleCfg.Client(ctx, oauthToken).Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetch google userinfo: %w", err)
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetch google userinfo: unexpected status %d", resp.StatusCode)
+	}
+
 	var info GoogleUserInfo
 	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
 		return nil, fmt.Errorf("decode google userinfo: %w", err)
+	}
+	if info.Email == "" {
+		return nil, fmt.Errorf("google userinfo missing email")
 	}
 
 	const sessionTTL = 30 * 24 * time.Hour
@@ -88,18 +98,19 @@ func (s *Service) AuthWithGoogle(ctx context.Context, code string) (*OAuthResult
 
 	token := uuid.NewString()
 	tokenHash := sha256.Sum256([]byte(token))
+	expiresAt := time.Now().UTC().Add(sessionTTL)
 
 	err = s.db.CreateSession(ctx, db.CreateSessionParams{
 		UserID:    userID,
 		TokenHash: tokenHash[:],
-		ExpiresAt: time.Now().UTC().Add(sessionTTL),
+		ExpiresAt: expiresAt,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create session: %w", err)
 	}
 
-	return &OAuthResult{
-		RedirectURL:  s.frontendURL,
-		SessionToken: token,
+	return &Session{
+		Token:     token,
+		ExpiresAt: expiresAt,
 	}, nil
 }
