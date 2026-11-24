@@ -1,3 +1,9 @@
 target/
 dist/
+build/
+logs/
+node_modules/
+.wrangler/
+.svelte-kit/
+desktop/src-tauri/gen/schemas/
 .env

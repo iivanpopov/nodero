@@ -4,7 +4,7 @@ ENV ?= release
 export
 
 .PHONY: all build clean master-build master-clean slave-build \
-        slave-clean server-proto server-build server-run server-clean
+        slave-clean server-build server-run server-clean
 
 all: build
 
@@ -23,9 +23,6 @@ slave-build:
 
 slave-clean:
 	@$(MAKE) -C slave clean
-
-server-proto:
-	@$(MAKE) -C server proto
 
 server-build:
 	@$(MAKE) -C server build

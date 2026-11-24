@@ -1,7 +1,7 @@
 pub mod codec;
 
 pub mod proto {
-    include!(concat!(env!("OUT_DIR"), "/nodero.rs"));
+    include!(concat!(env!("OUT_DIR"), "/nodero.v1.rs"));
 
     impl From<DiscoverRequest> for Envelope {
         fn from(from: DiscoverRequest) -> Self {

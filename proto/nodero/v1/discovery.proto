@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package nodero.v1;
+
+message DiscoverRequest {}
+
+message DiscoverResponse {
+  string device_id = 1;
+}

@@ -9,8 +9,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     prost_build::compile_protos(
         &[
-            proto_root.join("discovery.proto"),
-            proto_root.join("envelope.proto"),
+            proto_root.join("nodero/v1/discovery.proto"),
+            proto_root.join("nodero/v1/envelope.proto"),
         ],
         &[proto_root],
     )?;

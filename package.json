@@ -1,0 +1,9 @@
+{
+  "name": "nodero",
+  "private": true,
+  "workspaces": [
+    "web",
+    "desktop",
+    "packages/*"
+  ]
+}

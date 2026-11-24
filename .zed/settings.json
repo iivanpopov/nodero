@@ -1,0 +1,121 @@
+{
+  "format_on_save": "on",
+  "languages": {
+    "Svelte": {
+      "prettier": { "allowed": false },
+      "formatter": {
+        "external": {
+          "command": "bun",
+          "arguments": ["fmt", "--no-script", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "language_servers": [
+        "...",
+        "!vtsls",
+        "!stylelint-lsp",
+        "!oxfmt",
+        "!unocss-language-server",
+        "!tailwindcss-language-server",
+        "!oxlint",
+        "!eslint"
+      ]
+    },
+    "TypeScript": {
+      "prettier": { "allowed": false },
+      "formatter": {
+        "external": {
+          "command": "bun",
+          "arguments": ["fmt", "--no-script", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "language_servers": [
+        "typescript-ls",
+        "...",
+        "!vtsls",
+        "!typescript-language-server",
+        "!stylelint-lsp",
+        "!oxfmt",
+        "!unocss-language-server",
+        "!tailwindcss-language-server",
+        "!oxlint",
+        "!eslint"
+      ]
+    },
+    "TSX": {
+      "prettier": { "allowed": false },
+      "formatter": {
+        "external": {
+          "command": "bun",
+          "arguments": ["fmt", "--no-script", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "language_servers": ["typescript-ls", "...", "!vtsls", "!typescript-language-server"]
+    },
+    "JavaScript": {
+      "prettier": { "allowed": false },
+      "formatter": {
+        "external": {
+          "command": "bun",
+          "arguments": ["fmt", "--no-script", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "language_servers": ["typescript-ls", "...", "!vtsls", "!typescript-language-server"]
+    },
+    "JSON": {
+      "prettier": { "allowed": false },
+      "formatter": {
+        "external": {
+          "command": "bun",
+          "arguments": ["fmt", "--no-script", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "language_servers": [
+        "...",
+        "!vtsls",
+        "!stylelint-lsp",
+        "!oxfmt",
+        "!unocss-language-server",
+        "!tailwindcss-language-server",
+        "!oxlint",
+        "!eslint"
+      ]
+    },
+    "JSONC": {
+      "prettier": { "allowed": false },
+      "formatter": {
+        "external": {
+          "command": "bun",
+          "arguments": ["fmt", "--no-script", "--stdin-filepath", "{buffer_path}"]
+        }
+      },
+      "language_servers": [
+        "...",
+        "!vtsls",
+        "!stylelint-lsp",
+        "!oxfmt",
+        "!unocss-language-server",
+        "!tailwindcss-language-server",
+        "!oxlint",
+        "!eslint"
+      ]
+    },
+    "CSS": {
+      "prettier": { "allowed": false },
+      "formatter": {
+        "external": {
+          "command": "bun",
+          "arguments": ["fmt", "--no-script", "--stdin-filepath", "{buffer_path}"]
+        }
+      }
+    },
+    "HTML": {
+      "prettier": { "allowed": false },
+      "formatter": {
+        "external": {
+          "command": "bun",
+          "arguments": ["fmt", "--no-script", "--stdin-filepath", "{buffer_path}"]
+        }
+      }
+    }
+  }
+}
