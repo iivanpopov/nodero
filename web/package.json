@@ -12,16 +12,28 @@
     "build": "vite build",
     "preview": "vite preview",
     "prepare": "svelte-kit sync || echo ''",
+    "generate": "kubb generate",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
   },
   "devDependencies": {
+    "@kubb/adapter-oas": "^5.27.0",
+    "@kubb/plugin-barrel": "^5.27.0",
+    "@kubb/plugin-fetch": "^6.6.0",
+    "@kubb/plugin-ts": "^5.7.3",
+    "@kubb/plugin-valibot": "^0.4.0",
+    "@nodero/plugin-svelte-query": "workspace:*",
     "@sveltejs/adapter-static": "^4.0.1",
     "@sveltejs/kit": "^3.2.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "kubb": "^5.27.0",
     "svelte": "^5.57.3",
     "svelte-check": "^4.7.8",
     "typescript": "^6.0.3",
     "vite": "^8.3.8"
+  },
+  "dependencies": {
+    "@tanstack/svelte-query": "^6.4.7",
+    "valibot": "^1.5.0"
   }
 }

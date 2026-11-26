@@ -1,0 +1,488 @@
+import { ast } from '@internals/ast'
+import { text } from '@kubb/kit'
+import { getResponseContentTypeInfo, resolveErrorNames, resolveSuccessNames, buildClientOptionType, requestGroupOrder, getStream } from '@internals/shared'
+import { createFunctionParameter, createFunctionParameters, createObjectBindingPattern, createTypeLiteral } from '@kubb/plugin-ts'
+import type { FunctionParameterNode, FunctionParametersNode, ResolverTs } from '@kubb/plugin-ts'
+import { buildResponseHeadersType, buildResultTypeRef } from '@internals/client'
+import type { ReturnTypeOption } from '@internals/client'
+import type { InfiniteConfig, MemberTypeWrapper, MutationConfig, PageParamFn, QueryConfig } from './types.ts'
+
+export type RequestGroupKey = (typeof requestGroupOrder)[number]
+
+/**
+ * Widens a request-group member type so a generated TanStack hook accepts either the value or a
+ * deferred value. Both plugins apply this through the `memberTypeWrapper` of `buildGroupedRequestParam`;
+ * they only differ in how the deferred form is later resolved.
+ *
+ * `maybeRefOrGetter` is used by vue-query, which keeps the ref/getter live and unwraps it lazily with
+ * `toValue` because vue-query keys are reactive. `maybeValueOrGetter` is used by react-query, which
+ * resolves the getter once at the hook boundary and forwards a plain value because React Query hashes
+ * keys structurally and cannot hold a function.
+ */
+export function maybeRefOrGetter(type: string): string {
+  return `MaybeRefOrGetter<${type}>`
+}
+
+export function maybeValueOrGetter(type: string): string {
+  return `${type} | (() => ${type})`
+}
+
+export type BuildGroupedRequestParamOptions = {
+  resolver: ResolverTs
+  keys?: ReadonlyArray<RequestGroupKey>
+  memberTypeWrapper?: MemberTypeWrapper
+  /**
+   * Keeps headers optional for query key helpers, including operations with required headers.
+   */
+  optionalHeaders?: boolean
+  /** Binds the variables whole, so destructuring does not drop the chosen media type. */
+  withContentType?: boolean
+}
+
+/**
+ * Builds the grouped `{ path, query, body, headers, cookies }` parameter that mirrors the client
+ * function signature. Only the groups the operation carries are emitted, typed from the
+ * operation's `Options`. `keys` narrows the emitted groups.
+ *
+ * By default the whole group is typed as the single `Options` reference. When
+ * `memberTypeWrapper` is set, each group is emitted as its own member typed from the matching
+ * `Options['<group>']` slice and wrapped, used by vue-query to apply
+ * `MaybeRefOrGetter` per group.
+ */
+export function buildGroupedRequestParam(node: ast.OperationNode, options: BuildGroupedRequestParamOptions): FunctionParameterNode | null {
+  const { resolver, keys = requestGroupOrder, memberTypeWrapper, optionalHeaders = false, withContentType = false } = options
+  const groups = ast.http.getRequestGroups(node)
+  const names = keys.filter((key) => groups[key])
+
+  if (names.length === 0) {
+    return null
+  }
+
+  const requiredByGroup: Record<RequestGroupKey, boolean> = {
+    path: groups.required.path,
+    query: groups.required.query,
+    body: groups.body,
+    headers: !optionalHeaders && groups.required.headers,
+    cookies: false,
+  }
+
+  // The grouped object can default to `{}` only when none of the emitted groups is required. The
+  // query key narrows `keys`, so optionality is computed over the emitted groups, not all of them.
+  const isOptional = names.every((name) => !requiredByGroup[name])
+
+  // Drop the groups this binding never destructures, so a group
+  // that is required elsewhere does not leak into a binding that does not carry it.
+  const optionsName = resolver.response.options(node)
+  if (withContentType && groups.hasContentTypeChoice) {
+    return createFunctionParameter({ name: 'variables', type: optionsName, optional: false })
+  }
+
+  // `cookies` is on the options type only when the operation has cookie parameters, so it is omitted only then.
+  const omittedKeys = requestGroupOrder.filter(
+    (key) => (!keys.includes(key) || (optionalHeaders && key === 'headers' && !groups.headers)) && (key !== 'cookies' || groups.cookies),
+  )
+  const optionsType = omittedKeys.length > 0 ? `Omit<${optionsName}, ${omittedKeys.map((key) => `'${key}'`).join(' | ')}>` : optionsName
+  const paramType = optionalHeaders && names.includes('headers') ? `Omit<${optionsType}, 'headers'> & { headers?: ${optionsType}['headers'] }` : optionsType
+
+  if (memberTypeWrapper) {
+    const members = names.map((name) => ({
+      name,
+      type: memberTypeWrapper(`${optionsType}['${name}']`),
+      optional: !requiredByGroup[name],
+    }))
+
+    return createFunctionParameter({
+      name: createObjectBindingPattern({ elements: names.map((name) => ({ name })) }),
+      type: createTypeLiteral({ members }),
+      optional: false,
+      ...(isOptional ? { default: '{}' } : {}),
+    })
+  }
+
+  return createFunctionParameter({
+    name: createObjectBindingPattern({ elements: names.map((name) => ({ name })) }),
+    type: paramType,
+    optional: false,
+    ...(isOptional ? { default: '{}' } : {}),
+  })
+}
+
+export type BuildQueryOptionsParamsOptions = { resolver: ResolverTs; memberTypeWrapper?: MemberTypeWrapper }
+
+/**
+ * Builds the shared `({ path, query, body, headers, cookies }, config = {})` parameter list for a
+ * TanStack query-options function. The leading parameter mirrors the client signature, and the
+ * trailing `config` is the client's `Options` minus the request groups and `throwOnError`, which the
+ * hook passes itself. Framework plugins wrap the result when needed, for example vue-query applies `MaybeRefOrGetter`.
+ */
+export function buildQueryOptionsParams(node: ast.OperationNode, options: BuildQueryOptionsParamsOptions): FunctionParametersNode {
+  const { resolver, memberTypeWrapper } = options
+
+  const groupedParam = buildGroupedRequestParam(node, { resolver, memberTypeWrapper })
+
+  const configParam = createFunctionParameter({
+    name: 'config',
+    type: buildClientOptionType(),
+    default: '{}',
+  })
+
+  return createFunctionParameters({ params: [groupedParam, configParam].filter((param): param is FunctionParameterNode => param !== null) })
+}
+
+export type BuildClientCallOptions = {
+  clientName: string
+  signal?: boolean
+  unwrapName?: (name: string) => string
+  withContentType?: boolean
+  pageParam?: string
+}
+
+/**
+ * Builds the call to a client `<op>` function inside a query/mutation hook body. The function takes
+ * a single grouped options object, so the operation's request groups are passed as
+ * shorthand alongside the spread `config`, with `throwOnError: true` pinned last so a caller's config
+ * can't flip the query's error semantics. Queries thread the TanStack `signal`; mutations omit it.
+ *
+ * When `unwrapName` is set, each request group is passed as an explicit member unwrapped through it,
+ * used by vue-query to resolve refs and getters with `toValue(...)` at call time. `pageParam` names the
+ * query parameter an infinite query sets from TanStack's `pageParam`.
+ *
+ * @example
+ * ```ts
+ * buildClientCall(node, { clientName: 'getPetById', signal: true })
+ * // getPetById({ ...config, path, signal: config.signal ?? signal, throwOnError: true })
+ * ```
+ */
+export function buildClientCall(node: ast.OperationNode, options: BuildClientCallOptions): string {
+  const { clientName, signal = false, unwrapName, withContentType = false, pageParam } = options
+  const groups = ast.http.getRequestGroups(node)
+  const names = requestGroupOrder.filter((key) => groups[key])
+  const member = (name: RequestGroupKey) => {
+    const value = unwrapName ? unwrapName(name) : name
+    if (name === 'query' && pageParam) return `query: { ...${value}, ${JSON.stringify(pageParam)}: pageParam }`
+    return unwrapName ? `${name}: ${value}` : name
+  }
+
+  const args = [
+    '...config',
+    ...(withContentType && groups.hasContentTypeChoice ? ['...variables'] : names.map(member)),
+    signal ? 'signal: config.signal ?? signal' : null,
+    'throwOnError: true',
+  ].filter((part): part is string => part !== null)
+
+  return `${clientName}({ ${args.join(', ')} })`
+}
+
+export type BuildCallResultBodyOptions = { clientReturnType?: ReturnTypeOption; returnType?: ReturnTypeOption }
+
+/**
+ * Builds the query/mutation body that resolves a `buildClientCall` expression down to the bare
+ * success body. `clientReturnType` mirrors the registered client plugin's own `returnType` option: with
+ * `'data'` the call already resolves to the bare body, so it is returned directly; with `'full'`
+ * (the default) the call carries `unwrap()`, so the body calls it instead of destructuring `data`
+ * off the full result by hand. With `'plain'` (plugin-client) the call resolves to the user's
+ * `RequestResult`, so the body awaits it and reads `data`. With `returnType` `'full'` the body
+ * resolves to the whole `RequestResult`; `resolveHookFile` rejects that for a client that already stripped it.
+ *
+ * @example
+ * ```ts
+ * buildCallResultBody(buildClientCall(node, { clientName: 'getPetById' }))
+ * // return getPetById({ ...config, throwOnError: true }).unwrap()
+ * ```
+ */
+export function buildCallResultBody(call: string, options: BuildCallResultBodyOptions = {}): string {
+  const { clientReturnType = 'full', returnType = 'data' } = options
+  if (returnType !== 'data' || clientReturnType === 'data') {
+    return `return ${call}`
+  }
+  if (clientReturnType === 'plain') {
+    return `return (await ${call}).data`
+  }
+  return `return ${call}.unwrap()`
+}
+
+function buildResultType(node: ast.OperationNode, resolver: ResolverTs, typedHeaders: boolean): string {
+  const headers = typedHeaders ? buildResponseHeadersType({ node, types: resolver }) : null
+  return buildResultTypeRef('RequestResult', resolver.response.responses(node), headers, ['true'])
+}
+
+export type ResponseTypes = {
+  TData: string
+  TError: string
+}
+
+export type PageParamType = {
+  queryParamsTypeName: string | null
+  pageParamType: string
+}
+
+export type ResolvePageParamTypeOptions = {
+  resolver: ResolverTs
+  initialPageParam: InfiniteConfig['initialPageParam']
+  queryParam?: InfiniteConfig['queryParam']
+}
+
+export type BuildResponseTypesOptions = { returnType?: ReturnTypeOption; typedHeaders?: boolean }
+
+/**
+ * Builds the `TData` / `TError` type expressions shared by every generated hook, joining the resolved
+ * success responses into `TData` and wrapping the error responses in `ResponseErrorConfig<...>`.
+ * With `returnType` `'full'`, `TData` is the client's `RequestResult` over the operation's responses record, with the
+ * response headers the operation declares.
+ */
+export function buildResponseTypes(node: ast.OperationNode, resolver: ResolverTs, options: BuildResponseTypesOptions = {}): ResponseTypes {
+  const { returnType = 'data', typedHeaders = true } = options
+  // The same operation gets typed headers from one client and not from another, so both results are kept.
+  return resolver.memo(`responseTypes:${returnType}:${typedHeaders}:${node.method}\0${node.path}`, () => {
+    const successNames = resolveSuccessNames(node, resolver)
+    const bodyName = successNames.length > 0 ? successNames.join(' | ') : resolver.response.response(node)
+    // The client resolves a stream variant of a mixed response to its raw body.
+    const responseName = getStream(node)?.hasVariant ? `${bodyName} | ReadableStream<Uint8Array>` : bodyName
+    const errorNames = resolveErrorNames(node, resolver)
+
+    return {
+      TData: returnType === 'data' ? responseName : buildResultType(node, resolver, typedHeaders),
+      TError: `ResponseErrorConfig<${errorNames.length > 0 ? errorNames.join(' | ') : 'Error'}>`,
+    }
+  })
+}
+
+function resolveFallbackPageParamType(initialPageParam: InfiniteConfig['initialPageParam']): string {
+  if (typeof initialPageParam === 'number') return 'number'
+  if (typeof initialPageParam === 'boolean') return 'boolean'
+  if (typeof initialPageParam !== 'string') return 'unknown'
+  if (!initialPageParam.includes(' as ')) return 'string'
+
+  return initialPageParam.split(' as ').at(-1) ?? 'unknown'
+}
+
+/**
+ * Resolves the `TPageParam` generic for the infinite-query hooks. Prefers the type read from the
+ * configured `queryParam` on the operation's query object, and falls back to the type inferred from
+ * `initialPageParam` when that parameter type is unavailable. Also returns the query params type name
+ * so callers can reuse it when rewriting the paginated request.
+ */
+export function resolvePageParamType(node: ast.OperationNode, { resolver, initialPageParam, queryParam }: ResolvePageParamTypeOptions): PageParamType {
+  const firstQueryParam = ast.http.groupParameters(node).query[0]
+  const groupName = firstQueryParam ? resolver.param.query(node, firstQueryParam) : null
+  const individualName = firstQueryParam ? resolver.param.name(node, firstQueryParam) : null
+  const queryParamsTypeName = groupName !== individualName ? groupName : null
+
+  const queryParamType = queryParam && queryParamsTypeName ? `${queryParamsTypeName}[${text.quote(queryParam)}]` : null
+
+  if (!queryParamType) {
+    return { queryParamsTypeName, pageParamType: resolveFallbackPageParamType(initialPageParam) }
+  }
+
+  const isInitialPageParamDefined = initialPageParam !== undefined && initialPageParam !== null
+
+  return { queryParamsTypeName, pageParamType: isInitialPageParamDefined ? `NonNullable<${queryParamType}>` : queryParamType }
+}
+
+/**
+ * Applies the shared query defaults during plugin setup: `false` disables query generation, and an
+ * object merges over `methods: ['GET', 'QUERY']` and the plugin's runtime `importPath`. QUERY
+ * (RFC 10008) is a safe, idempotent read that carries its input in the body, so it is a query too.
+ */
+export function resolveQueryConfig(query: Partial<QueryConfig> | false, options: { importPath: string }): Required<QueryConfig> | false {
+  if (query === false) return false
+  return { importPath: options.importPath, methods: ['GET', 'QUERY'], ...query }
+}
+
+/**
+ * Applies the shared mutation defaults during plugin setup: `false` disables mutation generation,
+ * and an object merges over `methods: ['POST', 'PUT', 'PATCH', 'DELETE']` and the plugin's runtime
+ * `importPath`.
+ */
+export function resolveMutationConfig(mutation: Partial<MutationConfig> | false, options: { importPath: string }): Required<MutationConfig> | false {
+  if (mutation === false) return false
+  return { importPath: options.importPath, methods: ['POST', 'PUT', 'PATCH', 'DELETE'], ...mutation }
+}
+
+export type OperationClassification = {
+  isQuery: boolean
+  isMutation: boolean
+}
+
+export type ClassifyOperationOptions = {
+  query: Required<QueryConfig> | false
+  mutation: Required<MutationConfig> | false
+}
+
+/**
+ * Classifies an operation as a query or a mutation from the resolved `query` / `mutation` method lists.
+ * Disabled query and mutation configs do not claim operations, and a method already claimed by an
+ * enabled query config never counts as a mutation. Event streams are consumed through the client
+ * directly, so they do not generate query or mutation hooks.
+ */
+export function classifyOperation(node: ast.HttpOperationNode, { query, mutation }: ClassifyOperationOptions): OperationClassification {
+  if (getStream(node)?.shape) return { isQuery: false, isMutation: false }
+
+  const isQuery = !!query && query.methods.some((method) => node.method.toLowerCase() === method.toLowerCase())
+  const queryMethods = new Set(query ? query.methods : [])
+  const isMutation =
+    mutation !== false &&
+    !isQuery &&
+    (mutation ? mutation.methods : []).some((method) => !queryMethods.has(method) && node.method.toLowerCase() === method.toLowerCase())
+
+  return { isQuery, isMutation }
+}
+
+/**
+ * Helper to define a typed page param function for `infinite.getNextPageParam` or
+ * `infinite.getPreviousPageParam`. Serializes the function to a string for inlining in generated code.
+ *
+ * Note: Because the function is inlined verbatim into the generated file via `.toString()`,
+ * it must be self-contained and cannot reference local closures or external variables from
+ * the config file.
+ */
+// oxlint-disable-next-line typescript/no-explicit-any -- same defaults as `PageParamFn`
+export function definePageParam<TPage = any, TParam = any>(fn: PageParamFn<TPage, TParam>): string {
+  return fn.toString()
+}
+
+/**
+ * Applies the shared infinite-query defaults during plugin setup: a falsy value disables infinite
+ * queries, and an object merges over `queryParam: 'id'` and `initialPageParam: 0` with the cursor
+ * paths cleared.
+ */
+export function resolveInfiniteConfig(infinite: Partial<InfiniteConfig> | false): Required<InfiniteConfig> | false {
+  if (!infinite) return false
+  const hasExplicitInitialPageParam = infinite.hasExplicitInitialPageParam ?? infinite.initialPageParam !== undefined
+  const getNextPageParam = infinite.getNextPageParam
+    ? typeof infinite.getNextPageParam === 'function'
+      ? infinite.getNextPageParam.toString()
+      : infinite.getNextPageParam
+    : null
+  const getPreviousPageParam = infinite.getPreviousPageParam
+    ? typeof infinite.getPreviousPageParam === 'function'
+      ? infinite.getPreviousPageParam.toString()
+      : infinite.getPreviousPageParam
+    : null
+
+  return {
+    queryParam: 'id',
+    initialPageParam: 0,
+    hasExplicitInitialPageParam,
+    cursorParam: null,
+    nextParam: null,
+    previousParam: null,
+    getNextPageParam,
+    getPreviousPageParam,
+    ...infinite,
+    ...(getNextPageParam ? { getNextPageParam } : {}),
+    ...(getPreviousPageParam ? { getPreviousPageParam } : {}),
+  }
+}
+
+/**
+ * Whether the infinite hook for `node` should be generated: the operation takes the configured
+ * `queryParam`.
+ */
+export function matchesInfinite(node: ast.OperationNode, infinite: InfiniteConfig): boolean {
+  if (!infinite.queryParam) return false
+  // Strip trailing '?' which OpenAPI specs sometimes append to parameter names to denote optionality
+  return ast.http.groupParameters(node).query.some((param) => param.name.replace(/\?$/, '') === infinite.queryParam)
+}
+
+/**
+ * Warning for an infinite hook that falls back to the built-in page params on a response that
+ * isn't an array. Those params only stop on an empty array, so `hasNextPage` never turns false.
+ */
+export function getDefaultPageParamsWarning(node: ast.OperationNode, infinite: InfiniteConfig): string | null {
+  const usesDefault =
+    infinite.getNextPageParam == null &&
+    infinite.getPreviousPageParam == null &&
+    infinite.nextParam == null &&
+    infinite.previousParam == null &&
+    !infinite.cursorParam
+  if (!usesDefault) return null
+
+  const content = ast.http.responses.findPrimary(node)?.content
+  const jsonContent = content?.find((item) => ast.mediaType.isJson(item)) ?? content?.[0]
+  const schema = jsonContent?.schema
+
+  let resolved: ast.SchemaNode | null | undefined = schema
+  while (resolved?.type === 'ref' || (resolved?.type === 'intersection' && resolved.members?.length === 1)) {
+    resolved = resolved.type === 'ref' ? resolved.schema : resolved.members?.[0]
+  }
+  if (!resolved || resolved.type === 'array') return null
+
+  return `${node.operationId}: the default infinite page params expect an array response and never end for this one. Set \`infinite.getNextPageParam\` (or \`nextParam\`) to read the next page from the response.`
+}
+
+/**
+ * The request groups available to a query key transformer. Headers are available for custom keys
+ * but excluded from the default key. Cookies stay excluded.
+ */
+export const queryKeyGroupOrder = ['path', 'query', 'body', 'headers'] as const
+
+/**
+ * Whether the generated query key factory declares a parameter, so a call site passes an argument
+ * only when one is accepted.
+ */
+export function hasQueryKeyParams(node: ast.OperationNode): boolean {
+  const groups = ast.http.getRequestGroups(node)
+  return queryKeyGroupOrder.some((key) => groups[key])
+}
+
+export type BuildQueryKeyParamsOptions = { resolver: ResolverTs; memberTypeWrapper?: MemberTypeWrapper }
+
+/**
+ * Builds query key bindings for path, query, body, and optional headers. Custom transformers
+ * can reference `headers` in returned code without changing the default key.
+ */
+export function buildQueryKeyParams(node: ast.OperationNode, options: BuildQueryKeyParamsOptions): FunctionParametersNode {
+  const { resolver, memberTypeWrapper } = options
+  const groupedParam = buildGroupedRequestParam(node, { resolver, keys: queryKeyGroupOrder, memberTypeWrapper, optionalHeaders: true })
+
+  return createFunctionParameters({ params: groupedParam ? [groupedParam] : [] })
+}
+
+export type BuildHookParamsOptions = { resolver: ResolverTs; optionsType: string; optionsDefault?: string; memberTypeWrapper?: MemberTypeWrapper; withRequest?: boolean }
+
+/**
+ * Builds the hook parameter list: the grouped request param (omitted when `withRequest` is `false`) then `options` typed as `optionsType`.
+ */
+export function buildHookParams(node: ast.OperationNode, options: BuildHookParamsOptions): FunctionParametersNode {
+  const { resolver, optionsType, optionsDefault = '{}', memberTypeWrapper, withRequest = true } = options
+  const optionsParam = createFunctionParameter({ name: 'options', type: optionsType, default: optionsDefault })
+  const groupedParam = withRequest ? buildGroupedRequestParam(node, { resolver, memberTypeWrapper }) : null
+
+  return createFunctionParameters({ params: [groupedParam, optionsParam].filter((param): param is FunctionParameterNode => param !== null) })
+}
+
+/**
+ * The `TRequest` type argument of a mutation hook: the options type when the operation takes a request, else `undefined`.
+ * When the variables carry the request media type and the response has several, `contentType` can pick the
+ * response one too, as `{ request, response }`.
+ */
+export function resolveMutationRequestType(node: ast.OperationNode, resolver: ResolverTs): string {
+  if (!buildGroupedRequestParam(node, { resolver })) return 'undefined'
+
+  const optionsName = resolver.response.options(node)
+  const response = getResponseContentTypeInfo(node)
+  if (!ast.http.getRequestGroups(node).hasContentTypeChoice || !response.isMultipleContentTypes) return optionsName
+
+  // An inline options type is a union, so it needs parentheses. `string` keeps its bare request media type form assignable.
+  const base = /^[\w$]+$/.test(optionsName) ? optionsName : `(${optionsName})`
+  return `${base} & { contentType?: string | { response?: ${response.contentTypeUnion} } }`
+}
+
+/**
+ * Builds the object literal that unwraps each request group's getter before it reaches `queryKey`/`queryOptions`; `null` without a request group.
+ */
+export function buildResolvedRequestParams(node: ast.OperationNode): string | null {
+  const groups = ast.http.getRequestGroups(node)
+  const names = requestGroupOrder.filter((key) => groups[key])
+  if (names.length === 0) return null
+  return `{ ${names.map((name) => `${name}: typeof ${name} === 'function' ? ${name}() : ${name}`).join(', ')} }`
+}
+
+declare global {
+  namespace Kubb {
+    interface MemoRegistry {
+      responseTypes: ResponseTypes
+    }
+  }
+}

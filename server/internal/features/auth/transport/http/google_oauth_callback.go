@@ -12,8 +12,7 @@ import (
 )
 
 type OAuthCallbackInput struct {
-	Code       string `query:"code"`
-	OAuthError string `query:"error"`
+	Code string `query:"code"`
 }
 
 type AuthSessionBody struct {
@@ -27,11 +26,6 @@ type AuthSessionOutput struct {
 
 func (h *Handler) HandleGoogleCallback(ctx context.Context, input *OAuthCallbackInput) (*AuthSessionOutput, error) {
 	log := logger.FromContext(ctx)
-
-	if input.OAuthError != "" {
-		log.WarnContext(ctx, "google oauth callback returned error", "oauth_error", input.OAuthError)
-		return nil, huma.Error400BadRequest("oauth authentication failed")
-	}
 
 	if input.Code == "" {
 		log.WarnContext(ctx, "google oauth missing code")

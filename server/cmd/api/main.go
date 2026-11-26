@@ -81,7 +81,7 @@ func run() error {
 		middleware.RequestID(),
 		middleware.Logger(log),
 		middleware.Trace(),
-		middleware.CORS(cfg.Server.AllowedOrigins),
+		middleware.CORS(),
 		middleware.Recover(),
 	)
 

@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@kubb/renderer-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "types": ["node", "bun"],
+    "paths": {
+      "@internals/ast": ["./src/internals/ast/src/index.ts"],
+      "@internals/client": ["./src/internals/client/src/index.ts"],
+      "@internals/shared": ["./src/internals/shared/src/index.ts"],
+      "@internals/shared/types": ["./src/internals/shared/src/types.ts"],
+      "@internals/tanstack-query": ["./src/internals/tanstack-query/src/index.ts"],
+      "@internals/utils": ["./src/internals/utils/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}

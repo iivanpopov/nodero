@@ -1,0 +1,149 @@
+{
+  "lockfileVersion": 1,
+  "files": {
+    "generated/.kubb/auth.ts": {
+      "source": "5a9f613ef5bbef0606396a92a0b95daf125e7f5330a01d3652c9cb2b5dd8a1c9",
+      "output": "5c6028d46a485a3879bfb45bb16a3b9ff98b2a7f59e3fa1917542562a0425b34"
+    },
+    "generated/.kubb/client.ts": {
+      "source": "b47536a4d0a76b0b0e25e67dc8b9ef4a0808bbb78fde46a59c6dbc2094f473b9",
+      "output": "1afad66bd03fe64912b058c3d587bcc7689cf132952cd631d457fef11bb1dabf"
+    },
+    "generated/.kubb/config.ts": {
+      "source": "1fcc7fb8603315555a7bfc4ddd4739b451f7d41993c9d358b1aed12e13c88432",
+      "output": "27775347d2d3d411cea77464078bc69196c43670f3982161e5a351d235420f3c"
+    },
+    "generated/.kubb/core.ts": {
+      "source": "068d1e0bd459d94fd52e96a8d9306169ccbd6b5f89ed696af8ea070a0d4610e0",
+      "output": "e605c7af250c03c13c57adf52b601acf96de72463b33d7f8fca0c88902af638d"
+    },
+    "generated/.kubb/mediaTypes.ts": {
+      "source": "ed4fdd9e186fd29aec0cc3593907b3078ee272ab2e2359fa541353df5b200fb8",
+      "output": "9f8a79be36149d25306b1826e4d63a286120cd01738df97c9de6a7126e45be1c"
+    },
+    "generated/.kubb/retry.ts": {
+      "source": "be0328b82225593af47ba7bced5f6689b346cdbd3201187c830df6749fafeee0",
+      "output": "d254e8dd621ac53233cb1c41fa0c1b17cc7276e8756437a4d313cc123ba0f2b4"
+    },
+    "generated/.kubb/serializers.ts": {
+      "source": "cadd8471b1434c93978ae30987f3115be4d78b7d33a031cea9a71305b0baf2dd",
+      "output": "5efa7d998d67f19662c72c12fdeff527231133f0cbebdea8050df3de7f1c245e"
+    },
+    "generated/.kubb/serializers/path.ts": {
+      "source": "a4b22f7235c3d86fe456a1c22b9c1bb498a550ee365c7485e4ee5edb950b0a86",
+      "output": "ce589bf98bc43a94632bea3f2f43e8db650ffcda2e6e2fa33d6a1415d677a020"
+    },
+    "generated/.kubb/serializers/queryStyles.ts": {
+      "source": "bc3dc6a3bfaa0fd76acc5cb6c0c83a58ab21ad4ffd9232829b55732d3d13514b",
+      "output": "f3156aebf53f3f835ea89e88a1f6c4d36e7d97cb7de5b25d144a3958e642f2a5"
+    },
+    "generated/.kubb/standardSchema.ts": {
+      "source": "54dc00c98eff1279aae087236d94e8389737176a3b655d0548ca58f90b20ddda",
+      "output": "ad30140d6ca9f564ef43d83ab2a03b797e3b1b173c403b62bd31a0b180123f95"
+    },
+    "generated/.kubb/types.ts": {
+      "source": "891dfeeb58f7be2e71ba890e2fade7cb229a883f655dbede0025312bdd881ba9",
+      "output": "d9307fe692e55bedc7961c48638c99e27f97e72e74e7e40519d0d4cec261c17d"
+    },
+    "generated/clients/getApiV1AuthGoogle.ts": {
+      "source": "1790e791d86d77418fcd4bccb7e7ffd75dbcda7dc72387917f919a0bd2fc4c0b",
+      "output": "a9047147f65b7cfd2b05b46449593162bb44e144b3096702571abb517191cb59"
+    },
+    "generated/clients/getApiV1AuthGoogleCallback.ts": {
+      "source": "b034607cd251a4aadf26c72767b95cce10a25992e2dd2af342e9b944db6972fc",
+      "output": "354de6674c3cc6550fd03ac6c7d3e509886a7d568a2ac0f95dc0be20d80a7c7a"
+    },
+    "generated/clients/getApiV1AuthMe.ts": {
+      "source": "64a756476e830b75d56c2f4739051acba69b888cb8453bbb0f6bf85f77de41f8",
+      "output": "b1d3b06fccd9a4c375e01a0329352147b00454deea776882b2b2882e60552fdc"
+    },
+    "generated/clients/index.ts": {
+      "source": "e9e627ee8b9fb1329c3871ff216038e075330733b0bfccc903b5e55d5cc9f6a5",
+      "output": "9edf995d90270d6cb39affec8ad4d0088cccbaee936589b748fff40fd61590f9"
+    },
+    "generated/index.ts": {
+      "source": "2b88a39d5f9f345f3cdc570c92fbe0b035062c3f1fae380b3d20946f49ed77fe",
+      "output": "4a4d5e89f16f69c52ea9b4cad4fc4ed908088438b68652f67cbff31db56bd96e"
+    },
+    "generated/queries/createGetApiV1AuthGoogle.ts": {
+      "source": "3c1e5bdc78e1a3cf4f896766fc4215cb1bbba33bb18169203db87e3ea8e7febe",
+      "output": "b92700f4c0eb902a38c7a2404e5da73d3906c058b7eb1f1e261f07686a7d1208"
+    },
+    "generated/queries/createGetApiV1AuthGoogleCallback.ts": {
+      "source": "4a35fd8190397736f63da1589d36844b725f2250b569b6e6ede4227252efff9b",
+      "output": "9962d412a16ba5c5e8c680e7339338a97885f429c5de335ee95506d86b9a1f55"
+    },
+    "generated/queries/createGetApiV1AuthMe.ts": {
+      "source": "4b33ff705b54bca152dbbef6c42bb69fd600e895b1c0ceb88f08647d99acd876",
+      "output": "0b18c50916ce4e373bb4e4c09acafc40ffc17dfeac0cc1f22ed0f69dfd061339"
+    },
+    "generated/queries/index.ts": {
+      "source": "24197a1ca55ff23c863e9feb1b5f021b616469611ac47f84555c925589b50df9",
+      "output": "1d286542c65a9d77f42ca00b1ec9f9abb8e1bb4a73836d86d48a0e1026caf08e"
+    },
+    "generated/types/AuthSessionBody.ts": {
+      "source": "83c401c24322a111c600590efacdf096fb37b3e0a48b297b3824a568a8980e34",
+      "output": "35a3c1da37e70f31b54a4bed955dbe22ef8ba7adb3626c721303f2cd2f8d8b89"
+    },
+    "generated/types/ErrorDetail.ts": {
+      "source": "e2dc9f4779ac3c8d59937fa13f2fabed40c06c365b49478b704fb9b65567c517",
+      "output": "38d44ffeee690c5bf4c260a2e6fafb4badcccf5e9b58055b5787d37709bff8c6"
+    },
+    "generated/types/ErrorModel.ts": {
+      "source": "7fefb5e6da5657ecde9f2a8d43b7d291e20e885b1dff181ed7c04e900e814f57",
+      "output": "9824013c9e26ea0105dab893556433d5eb137652d15afcd0b39c153f0a51a9e5"
+    },
+    "generated/types/GetApiV1AuthGoogle.ts": {
+      "source": "93e21e9947a74ae9753363957e3a0b2105e6c7085511262164cac1ce62321353",
+      "output": "8876c5492ab8e58c0b93971323ff834df0ac5eafac8bf749dd5f236276d0abe3"
+    },
+    "generated/types/GetApiV1AuthGoogleCallback.ts": {
+      "source": "daa945c6a863ee7ca4bc511b5862041548a64d41643cfeec9627ce54be9fe26d",
+      "output": "d9840508b886348d11265615c7e2d336c1bfc00b896aa6b502c581424f116494"
+    },
+    "generated/types/GetApiV1AuthMe.ts": {
+      "source": "fac27c154c857fdf4e5b2dd058ce27cc64069a26a8dc68668e4289feada03895",
+      "output": "e2705ab85573d35feb5497dda31cc2402b9cab8ff4a2aafa36650c670d2dd437"
+    },
+    "generated/types/MeBody.ts": {
+      "source": "846ae5dcc5985f1d4143c5953e84769bee269b1d8b325f6dbabf94cd59fb3de0",
+      "output": "889d4aa2f30361684db2c1298185bf1050e680e50b1aec88f089b3403aa92d17"
+    },
+    "generated/types/index.ts": {
+      "source": "c076b47c035eb4d7df706ab953ac0a11fced5efce4f30e81b5e01c45567866a6",
+      "output": "747a3b4e3bfe7d8729c06ce70827cbae48d47e4cbed95c928775f6d24324a278"
+    },
+    "generated/valibot/authSessionBodySchema.ts": {
+      "source": "dc2bdfeead7ac173347c05b7d7899d56ef966beda5425957554b88a958bb30eb",
+      "output": "e19749add0942f047c7848f2fa3a4f145961ed7ef70523a570aa5b42598d6b1d"
+    },
+    "generated/valibot/errorDetailSchema.ts": {
+      "source": "c5b145a4ebd38813566adac0f13a77342af297406203da39b65f90a3930fd7b5",
+      "output": "718a3211ba927da55f967446815d78a31a78166d7e63db53be71777d9c935ec5"
+    },
+    "generated/valibot/errorModelSchema.ts": {
+      "source": "b0dc656cdeba8461ebfe63423ae0382d16b8b19b53c3edfc4163641b483b4471",
+      "output": "e7ec79f6d778d1dc954b4f84a975ef93af0ab3ac34b09ea1ed24d096c5eb3c02"
+    },
+    "generated/valibot/getApiV1AuthGoogleCallbackSchema.ts": {
+      "source": "e3c99113b93b4fdea32ae1b6f397768fa72c277f0bd353ea15f5c0e1618be9b1",
+      "output": "48f795b96801b5566b9f734ed709e20a980cf4e6d6552eef18b947fcb361e690"
+    },
+    "generated/valibot/getApiV1AuthGoogleSchema.ts": {
+      "source": "fbbc60ffdf26a0c7bba0c20bb092a5a3a4bc6f2604a55b5c59fe51b801085918",
+      "output": "8358a539641596bde1821156e45dff8b77335e46a47b61e26ec107fe93f68429"
+    },
+    "generated/valibot/getApiV1AuthMeSchema.ts": {
+      "source": "2b6c81e125b84876bbaf164c0f46d7be2fc801a2ef00836e36ea56219717c1d1",
+      "output": "d3a72dbd776edefa890688970b9cb854fde0365fc7f3cb547d250202a634f853"
+    },
+    "generated/valibot/index.ts": {
+      "source": "2aa444bdf9050edff45020603eeaeaa5358dc215ec229aac5fd0d238d73ecee1",
+      "output": "b9dc222cadaeddde84055b7818b87b57108577ccba413b9da5aacc413ff9397b"
+    },
+    "generated/valibot/meBodySchema.ts": {
+      "source": "719bd695a80f099858b914bb3150f684cafedd6290e19313a09be9e1266d7869",
+      "output": "e01a026c9daead3c1f4d6280ad289069f2345b2de33e274875d67243c0d44890"
+    }
+  }
+}
